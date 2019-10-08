@@ -1,0 +1,26 @@
+{
+  "name": "minecraft_agent",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "mineflayer-navigate": "^0.0.10",
+    "mineflayer": "^2.9.6",
+    "minecraft-data": "^2.39.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Maglo22/minecraft_agent.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Maglo22/minecraft_agent/issues"
+  },
+  "homepage": "https://github.com/Maglo22/minecraft_agent#readme"
+}
