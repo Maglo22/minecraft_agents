@@ -23,9 +23,9 @@ const bot = mineflayer.createBot({
 // install plugins
 navigate(bot);
 
-var timeoutId, timeoutReFollow, timeoutFlag;
+var timeoutId, timeoutReFollow;
 var targetEntity, playerEntity, nearEntity;
-var flag = true;
+var visitedEntities = [];
 
 // once logged to the server
 bot.once('login', () => {
@@ -37,8 +37,7 @@ bot.once('login', () => {
 bot.on('rain', () => {
     if(bot.isRaining) {
         bot.chat('Its rain time');
-    }
-    else {
+    } else {
         bot.chat('Its no longer rain time');
     }
 });
@@ -103,24 +102,54 @@ function equipItem (name, destination) {
     }
 }
 
+// check the type of nearest entity
 function checkNearestEntity() {
     nearEntity = nearestEntity();
+    // Sheep
     if (nearEntity.entityType === 91) {
-        targetEntity = nearEntity;
-        changeFlag();
-        bot.chat('Following sheep');
+        if (!visitedEntities.includes(nearEntity.id)) {
+            targetEntity = nearEntity;
 
-        equipItem('shears', 'hand');
-        bot.useOn(targetEntity);
+            bot.chat('Maybe I can shear this sheep...');
 
-        timeoutReFollow = setTimeout(followEntity, 1 * 1000, playerEntity);
+            equipItem('shears', 'hand');
+            bot.useOn(targetEntity);
+
+            visitedEntities.push(nearEntity.id);
+
+            timeoutReFollow = setTimeout(followEntity, 4 * 1000, playerEntity);
+        }
     }
-}
+    // Cow
+    else if (nearEntity.entityType === 92) {
+        if(!visitedEntities.includes(nearEntity.id)) {
+            targetEntity = nearEntity;
 
-function changeFlag() {
-    bot.chat('flag changed');
-    flag = !flag;
-    clearTimeout(timeoutFlag);
+            bot.chat('This cow looks hungry');
+
+            equipItem('wheat', 'hand');
+            bot.useOn(targetEntity);
+
+            visitedEntities.push(nearEntity.id);
+
+            timeoutReFollow = setTimeout(followEntity, 4 * 1000, playerEntity);
+        }
+    }
+    // Chicken
+    else if (nearEntity.entityType === 93) {
+        if (!visitedEntities.includes(nearEntity.id)) {
+            targetEntity = nearEntity;
+
+            bot.chat('I have some seeds for this chicken');
+
+            equipItem('wheat_seeds', 'hand');
+            bot.useOn(targetEntity);
+
+            visitedEntities.push(nearEntity.id);
+
+            timeoutReFollow = setTimeout(followEntity, 4 * 1000, playerEntity);
+        }
+    }
 }
 
 // move to a target entity's position
@@ -137,11 +166,7 @@ function moveToTarget() {
         }
     });
 
-    if (flag) {
-        checkNearestEntity();
-    } else if (!flag) {
-        timeoutFlag = setTimeout(changeFlag, 3 * 1000);
-    }
+    checkNearestEntity();
 
     timeoutId = setTimeout(moveToTarget, 1 * 1000); // repeat call after 1 second
 }
@@ -151,7 +176,6 @@ function stopFollow() {
     if (targetEntity == null) return;
     targetEntity = null;
     clearTimeout(timeoutId);
-    clearTimeout(timeoutFlag);
     clearTimeout(timeoutReFollow);
     bot.navigate.stop('interrupted');
 }
@@ -241,7 +265,7 @@ function itemByName (name) {
 
 function itemToString (item) {
     if (item) {
-        return `id: ${item.type} ${item.name} x ${item.count}`;
+        return `${item.name} x ${item.count}`;
     } else {
         return '(nothing)';
     }
