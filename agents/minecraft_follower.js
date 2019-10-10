@@ -1,13 +1,13 @@
-// node minecraft_agent.js localhost 25565
+// node minecraft_follower.js localhost 25565
 
-const mineflayer = require('mineflayer')
+const mineflayer = require('mineflayer');
 const navigate = require('mineflayer-navigate')(mineflayer);
 const vec3 = require('vec3');
 
 // check for parameters
 // username and password are required only for online-mode=true servers
 if (process.argv.length < 4 || process.argv.length > 6) {
-    console.log('Usage: node minecraft_agent.js <host> <port> [<username>] [<password>]')
+    console.log('Usage: node minecraft_agent.js <host> <port> [<username>] [<password>]');
     process.exit(1);
 }
 
@@ -86,7 +86,7 @@ bot.on('chat', (username, message) => {
 
 // equip item in destination given
 function equipItem (name, destination) {
-    const item = itemByName(name)
+    const item = itemByName(name);
     if (item) {
         bot.equip(item, destination, checkIfEquipped);
     } else {
@@ -222,7 +222,7 @@ function nearestEntity (type) {
 
 // list items in bot inventory
 function sayItems (items = bot.inventory.items()) {
-    const output = items.map(itemToString).join(', ')
+    const output = items.map(itemToString).join(', ');
     if (output) {
         bot.chat(output);
     } else {
