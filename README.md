@@ -8,3 +8,6 @@ Agents programmed using the [mineflayer](https://github.com/PrismarineJS/minefla
 _Make sure you have installed [Node.js](https://nodejs.org/en/)._
 
 Use `npm install` to get the dependencies (the API).
+
+# wiki
+Chek the [wiki](https://github.com/Maglo22/minecraft_agents/wiki) for more information.
