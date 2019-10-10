@@ -1,7 +1,5 @@
 # Minecraft Agents
-Agents for Minecraft Java Edition.
-
-Agents programmed using the [mineflayer](https://github.com/PrismarineJS/mineflayer "Mineflayer") API by [PrismineJS](https://github.com/PrismarineJS "PrimarineJS").
+Agents for Minecraft Java Edition programmed using the [mineflayer](https://github.com/PrismarineJS/mineflayer "Mineflayer") API by [PrismarineJS](https://github.com/PrismarineJS "PrimarineJS").
 
 # Installation
 
