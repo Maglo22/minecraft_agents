@@ -260,7 +260,7 @@ function craftItem (name, amount) {
 
 // check item in inventory by its name
 function itemByName (name) {
-    return bot.inventory.items().filter(item => item.name === name)[0]
+    return bot.inventory.items().filter(item => item.name === name)[0];
 }
 
 function itemToString (item) {
