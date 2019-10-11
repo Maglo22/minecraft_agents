@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
-    "mineflayer-navigate": "^0.0.10",
+    "minecraft-data": "^2.39.1",
     "mineflayer": "^2.9.6",
-    "minecraft-data": "^2.39.1"
+    "mineflayer-blockfinder": "0.0.7",
+    "mineflayer-navigate": "^0.0.10"
   },
   "devDependencies": {},
   "scripts": {
