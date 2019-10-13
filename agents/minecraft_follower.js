@@ -2,6 +2,7 @@
 
 const mineflayer = require('mineflayer');
 const navigate = require('mineflayer-navigate')(mineflayer);
+const blockFinderPlugin = require('mineflayer-blockfinder')(mineflayer);
 const vec3 = require('vec3');
 
 // check for parameters
@@ -22,10 +23,11 @@ const bot = mineflayer.createBot({
 
 // install plugins
 navigate(bot);
+bot.loadPlugin(blockFinderPlugin);
 
-var timeoutId, timeoutReFollow;
-var targetEntity, playerEntity, nearEntity;
-var visitedEntities = [];
+var timeoutId, timeoutReFollow; // timeouts variables so they can be cleared
+var targetEntity, playerEntity, nearEntity; // target entities for the following and interaction
+var visitedEntities = []; // entities the agent has interacted with
 
 // once logged to the server
 bot.once('login', () => {
@@ -35,12 +37,55 @@ bot.once('login', () => {
 
 // when it starts or finish raining
 bot.on('rain', () => {
-    if(bot.isRaining) {
-        bot.chat('Its rain time');
-    } else {
-        bot.chat('Its no longer rain time');
-    }
+    let r = Math.floor(Math.random() * 5); 
+    dialogOptions(bot.isRaining, r);
 });
+
+function dialogOptions(isRaining, r) {
+    if (isRaining) {
+        switch(r) {
+            case 0:
+                bot.chat('I should have brought an umbrella');
+                break;
+            case 1:
+                bot.chat('At least I didnt wash the car today');
+                break;
+            case 2:
+                bot.chat('Dammit, my clothes!');
+                break;
+            case 3:
+                bot.chat('Hopefully I didnt leave my laundry hanging');
+                break;
+            case 4:
+                bot.chat('Should have checked the weather');
+                break;
+            default:
+                bot.chat('Its raining');
+                break;
+        }
+    } else {
+        switch(r) {
+            case 0:
+                bot.chat('Maybe I should change clothes to avoid getting sick');
+                break;
+            case 1:
+                bot.chat('It finally stopped');
+                break;
+            case 2:
+                bot.chat('Does the rain affect flora in this world?');
+                break;
+            case 3:
+                bot.chat('Thank goodness the dirt doesnt get wet for whatever reason');
+                break;
+            case 4:
+                bot.chat('To be honest I do feel more relaxed when its raining');
+                break;
+            default:
+                bot.chat('Its no longer raining');
+                break;
+        }
+    }
+}
 
 // bots health on chat
 bot.on('health', () => {
@@ -75,7 +120,7 @@ bot.on('chat', (username, message) => {
         // craft and item
         case /^craft [0-9]+ \w+$/.test(message):
             // craft amount item -> craft 64 stick
-            craftItem(command[2], command[1]);
+            findCraftingTable(command[2], command[1]);
             break;
         // leave the server
         case /^leave$/.test(message):
@@ -195,11 +240,77 @@ function followEntity(entity) {
     return true;
 }
 
+// finds nearest crafting table
+function findCraftingTable(name, amount) {
+    bot.findBlock({
+        point: bot.entity.position,
+        matching: 58, // crafting table id
+        maxDistance: 25
+    }, function(err, block) {
+        if (err) {
+            // console.log(err);
+            bot.chat('Error trying to find a crafting table');
+            return;
+        }
+        if(block.length) {
+            let path = bot.navigate.findPathSync(block[0].position, {
+                timeout: 1 * 1000,
+                endRadius: 1
+            });
+
+            if (path.status == 'success') {
+                bot.chat('Ill use the crafting table at ' + block[0].position);
+            }
+
+            bot.navigate.walk(path.path, function(stopReason) {
+                if (block.length) {
+                    bot.lookAt(block[0].position.plus(vec3(0, 1.62, 0)));
+                }
+                if (stopReason == 'arrived') {
+                    craftItem(name, amount, block[0]); // crafts the item
+                } else {
+                    bot.chat('Couldnt get to the crafting table');
+                    return;
+                }
+            });
+        } else {
+            bot.chat('I cant find any crafting table nearby');
+            return;
+        }
+    });
+}
+
+// craft an item given its name and amount
+function craftItem (name, amount, craftingTable) {
+    amount = parseInt(amount, 10);
+    const item = require('minecraft-data')(bot.version).findItemOrBlockByName(name); // finds the item by name
+    
+    if (item) {
+        const recipe = bot.recipesFor(item.id, null, 1, craftingTable)[0]; // holds the first recipe found to craft the item
+        if (recipe) {
+        bot.chat(`Crafting ${name}...`);
+        bot.craft(recipe, amount, craftingTable, (err) => {
+            if (err) {
+                bot.chat(`Error crafting ${name}`);
+            } else {
+                bot.chat(`Crafted ${name} (x ${amount})`);
+            }
+        });
+        } else {
+            bot.chat(`I cannot craft ${name}`);
+        }
+    } else {
+        bot.chat(`Unknown item: ${name}`);
+    }
+}
+
 // on bot quits the server
 bot.on('end', () => {
     console.log('\n--- Agent quit the server ---\n');
     process.exit(1);
 });
+
+/* --- Helper functions --- */
 
 // return nearest entity to the bot
 function nearestEntity (type) {
@@ -231,39 +342,12 @@ function sayItems (items = bot.inventory.items()) {
     }
 }
 
-// craft an item given its name and amount
-function craftItem (name, amount) {
-    amount = parseInt(amount, 10);
-    const item = require('minecraft-data')(bot.version).findItemOrBlockByName(name); // finds the item by name
-    // finds nearest crafting table
-    const craftingTable = bot.findBlock({
-        matching: 58 // crafting table id
-    });
-
-    if (item) {
-        const recipe = bot.recipesFor(item.id, null, 1, craftingTable)[0]; // holds the first recipe found to craft the item
-        if (recipe) {
-        bot.chat(`Crafting ${name}...`);
-        bot.craft(recipe, amount, craftingTable, (err) => {
-            if (err) {
-                bot.chat(`Error crafting ${name}`);
-            } else {
-                bot.chat(`Crafted ${name} (x ${amount})`);
-            }
-        });
-        } else {
-            bot.chat(`I cannot craft ${name}`);
-        }
-    } else {
-        bot.chat(`Unknown item: ${name}`);
-    }
-}
-
 // check item in inventory by its name
 function itemByName (name) {
     return bot.inventory.items().filter(item => item.name === name)[0];
 }
 
+// returns string of the item name + amount in inventory
 function itemToString (item) {
     if (item) {
         return `${item.name} x ${item.count}`;
