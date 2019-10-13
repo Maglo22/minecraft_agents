@@ -44,7 +44,8 @@ bot.on('rain', () => {
 
 // bots health on chat
 bot.on('health', () => {
-    bot.chat('<Agent health: ' + bot.health/2 + ' hearts>');
+    let health = bot.health/2;
+    bot.chat('<Agent health: ' + health.toFixed(1) + ' hearts>');
 });
 
 // when chat is activated
