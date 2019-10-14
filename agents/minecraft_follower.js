@@ -41,51 +41,6 @@ bot.on('rain', () => {
     dialogOptions(bot.isRaining, r);
 });
 
-function dialogOptions(isRaining, r) {
-    if (isRaining) {
-        switch(r) {
-            case 0:
-                bot.chat('I should have brought an umbrella');
-                break;
-            case 1:
-                bot.chat('At least I didnt wash the car today');
-                break;
-            case 2:
-                bot.chat('Dammit, my clothes!');
-                break;
-            case 3:
-                bot.chat('Hopefully I didnt leave my laundry hanging');
-                break;
-            case 4:
-                bot.chat('Should have checked the weather');
-                break;
-            default:
-                bot.chat('Its raining');
-                break;
-        }
-    } else {
-        switch(r) {
-            case 0:
-                bot.chat('Maybe I should change clothes to avoid getting sick');
-                break;
-            case 1:
-                bot.chat('It finally stopped');
-                break;
-            case 2:
-                bot.chat('Does the rain affect flora in this world?');
-                break;
-            case 3:
-                bot.chat('Thank goodness the dirt doesnt get wet for whatever reason');
-                break;
-            case 4:
-                bot.chat('To be honest I do feel more relaxed when its raining');
-                break;
-            default:
-                bot.chat('Its no longer raining');
-                break;
-        }
-    }
-}
 
 // bots health on chat
 bot.on('health', () => {
@@ -148,6 +103,7 @@ function equipItem (name, destination) {
     }
 }
 
+
 // check the type of nearest entity
 function checkNearestEntity() {
     nearEntity = nearestEntity();
@@ -156,12 +112,10 @@ function checkNearestEntity() {
         if (!visitedEntities.includes(nearEntity.id)) {
             targetEntity = nearEntity;
 
-            bot.chat('Maybe I can shear this sheep...');
+            let msg = 'Maybe I can shear this sheep...';
 
-            equipItem('shears', 'hand');
-            bot.useOn(targetEntity);
-
-            visitedEntities.push(nearEntity.id);
+            agentAction('shears', 'hand', targetEntity, msg);
+            visitedEntities.push(targetEntity.id);
 
             timeoutReFollow = setTimeout(followEntity, 4 * 1000, playerEntity);
         }
@@ -171,12 +125,10 @@ function checkNearestEntity() {
         if(!visitedEntities.includes(nearEntity.id)) {
             targetEntity = nearEntity;
 
-            bot.chat('This cow looks hungry');
+            let msg = 'This cow looks hungry';
 
-            equipItem('wheat', 'hand');
-            bot.useOn(targetEntity);
-
-            visitedEntities.push(nearEntity.id);
+            agentAction('wheat', 'hand', targetEntity, msg);
+            visitedEntities.push(targetEntity.id);
 
             timeoutReFollow = setTimeout(followEntity, 4 * 1000, playerEntity);
         }
@@ -186,12 +138,10 @@ function checkNearestEntity() {
         if (!visitedEntities.includes(nearEntity.id)) {
             targetEntity = nearEntity;
 
-            bot.chat('I have some seeds for this chicken');
+            let msg = 'I have some seeds for this chicken';
 
-            equipItem('wheat_seeds', 'hand');
-            bot.useOn(targetEntity);
-
-            visitedEntities.push(nearEntity.id);
+            agentAction('wheat_seeds', 'hand', targetEntity, msg);
+            visitedEntities.push(targetEntity.id);
 
             timeoutReFollow = setTimeout(followEntity, 4 * 1000, playerEntity);
         }
@@ -221,8 +171,7 @@ function moveToTarget() {
 function stopFollow() {
     if (targetEntity == null) return;
     targetEntity = null;
-    clearTimeout(timeoutId);
-    clearTimeout(timeoutReFollow);
+    clearTimeIntervals();
     bot.navigate.stop('interrupted');
 }
 
@@ -313,6 +262,52 @@ bot.on('end', () => {
 /* --- Helper functions --- */
 
 // return nearest entity to the bot
+function dialogOptions(isRaining, r) {
+    if (isRaining) {
+        switch(r) {
+            case 0:
+                bot.chat('I should have brought an umbrella');
+                break;
+            case 1:
+                bot.chat('At least I didnt wash the car today');
+                break;
+            case 2:
+                bot.chat('Dammit, my clothes!');
+                break;
+            case 3:
+                bot.chat('Hopefully I didnt leave my laundry hanging');
+                break;
+            case 4:
+                bot.chat('Should have checked the weather');
+                break;
+            default:
+                bot.chat('Its raining');
+                break;
+        }
+    } else {
+        switch(r) {
+            case 0:
+                bot.chat('Maybe I should change clothes to avoid getting sick');
+                break;
+            case 1:
+                bot.chat('It finally stopped');
+                break;
+            case 2:
+                bot.chat('Does the rain affect flora in this world?');
+                break;
+            case 3:
+                bot.chat('Thank goodness the dirt doesnt get wet for whatever reason');
+                break;
+            case 4:
+                bot.chat('To be honest I do feel more relaxed when its raining');
+                break;
+            default:
+                bot.chat('Its no longer raining');
+                break;
+        }
+    }
+}
+
 function nearestEntity (type) {
     let id;
     let entity;
@@ -330,6 +325,14 @@ function nearestEntity (type) {
         }
     }
     return best;
+}
+
+// agent does an action on an entity
+function agentAction(item, destination, entity, msg) {
+    bot.chat(msg);
+
+    equipItem(item, destination);
+    bot.useOn(entity);
 }
 
 // list items in bot inventory
@@ -354,4 +357,9 @@ function itemToString (item) {
     } else {
         return '(nothing)';
     }
+}
+
+function clearTimeIntervals() {
+    clearTimeout(timeoutId);
+    clearTimeout(timeoutReFollow);
 }
