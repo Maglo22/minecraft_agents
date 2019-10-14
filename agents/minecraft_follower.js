@@ -25,7 +25,8 @@ const bot = mineflayer.createBot({
 navigate(bot);
 bot.loadPlugin(blockFinderPlugin);
 
-var timeoutId, timeoutReFollow; // timeouts variables so they can be cleared
+var timeoutId, timeoutReFollow; // timeouts for following an entity
+var intervalAction; // interval timer for the agent interactions
 var targetEntity, playerEntity, nearEntity; // target entities for the following and interaction
 var visitedEntities = []; // entities the agent has interacted with
 
@@ -77,6 +78,10 @@ bot.on('chat', (username, message) => {
             // craft amount item -> craft 64 stick
             findCraftingTable(command[2], command[1]);
             break;
+        // list commands
+        case /^commands$/.test(message):
+            listCommands();
+            break;
         // leave the server
         case /^leave$/.test(message):
             bot.chat('See ya');
@@ -84,6 +89,15 @@ bot.on('chat', (username, message) => {
             break;
     }
 });
+
+// list available commands
+function listCommands() {
+    bot.chat('follow -> follow player');
+    bot.chat('stop -> stop following');
+    bot.chat('list -> list inventory');
+    bot.chat('craft amount item -> craft given amount of item');
+    bot.chat('leave -> leave server');
+}
 
 // equip item in destination given
 function equipItem (name, destination) {
@@ -112,9 +126,9 @@ function checkNearestEntity() {
         if (!visitedEntities.includes(nearEntity.id)) {
             targetEntity = nearEntity;
 
-            let msg = 'Maybe I can shear this sheep...';
+            bot.chat('Maybe I can shear this sheep...');
 
-            agentAction('shears', 'hand', targetEntity, msg);
+            intervalAction = setInterval(agentAction, 1 * 1000, 'shears', 'hand', targetEntity);
             visitedEntities.push(targetEntity.id);
 
             timeoutReFollow = setTimeout(followEntity, 4 * 1000, playerEntity);
@@ -125,9 +139,9 @@ function checkNearestEntity() {
         if(!visitedEntities.includes(nearEntity.id)) {
             targetEntity = nearEntity;
 
-            let msg = 'This cow looks hungry';
+            bot.chat('This cow looks hungry');
 
-            agentAction('wheat', 'hand', targetEntity, msg);
+            intervalAction = setInterval(agentAction, 1 * 1000, 'wheat', 'hand', targetEntity);
             visitedEntities.push(targetEntity.id);
 
             timeoutReFollow = setTimeout(followEntity, 4 * 1000, playerEntity);
@@ -138,9 +152,9 @@ function checkNearestEntity() {
         if (!visitedEntities.includes(nearEntity.id)) {
             targetEntity = nearEntity;
 
-            let msg = 'I have some seeds for this chicken';
+            bot.chat('I have some seeds for this chicken');
 
-            agentAction('wheat_seeds', 'hand', targetEntity, msg);
+            intervalAction = setInterval(agentAction, 1 * 1000, 'wheat_seeds', 'hand', targetEntity);
             visitedEntities.push(targetEntity.id);
 
             timeoutReFollow = setTimeout(followEntity, 4 * 1000, playerEntity);
@@ -177,6 +191,7 @@ function stopFollow() {
 
 // follow entity
 function followEntity(entity) {
+    if (intervalAction) stopInterval();
     if (entity == null) return false;
 
     if (targetEntity != null) {
@@ -204,7 +219,7 @@ function findCraftingTable(name, amount) {
         if(block.length) {
             let path = bot.navigate.findPathSync(block[0].position, {
                 timeout: 1 * 1000,
-                endRadius: 1
+                endRadius: 3
             });
 
             if (path.status == 'success') {
@@ -328,9 +343,7 @@ function nearestEntity (type) {
 }
 
 // agent does an action on an entity
-function agentAction(item, destination, entity, msg) {
-    bot.chat(msg);
-
+function agentAction(item, destination, entity) {
     equipItem(item, destination);
     bot.useOn(entity);
 }
@@ -362,4 +375,10 @@ function itemToString (item) {
 function clearTimeIntervals() {
     clearTimeout(timeoutId);
     clearTimeout(timeoutReFollow);
+    if (intervalAction) stopInterval();
+}
+
+function stopInterval() {
+    clearInterval(intervalAction);
+    intervalAction = false;
 }
