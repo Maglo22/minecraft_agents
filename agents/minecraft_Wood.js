@@ -1,10 +1,9 @@
+// node totally_not_manes_bot.js localhost 25565
+
 var mineflayer = require('mineflayer');
-const Block = require("prismarine-block")("1.8");
-var vec3 = require('vec3').Vec3;
-const  wood = ['oak_wood','spruce_wood','birch_wood','jungle_wood','acacia_wood','dark_oak_wood'];
-const mcData=require("minecraft-data")("1.8.8")
 var blockFinderPlugin = require('mineflayer-blockfinder')(mineflayer);
 var navigatePlugin = require('mineflayer-navigate')(mineflayer);
+const vec3 = require('vec3');
 
 //All the axes possible
 var all_t = ['diamond_axe', 'iron_axe', 'golden_axe', 'stone_axe', 'wooden_axe']
@@ -18,161 +17,129 @@ var bot = mineflayer.createBot({
 bot.loadPlugin(blockFinderPlugin);
 navigatePlugin(bot);
 
-var working = false;
 
-bot.navigate.on('cannotFind', function (closestPath) {
-  bot.chat('unable to find path. getting as close as possible')
-  bot.navigate.walk(closestPath)
+var timeoutChop;
+
+bot.once('login', () => {
+    console.log('\n--- Agent joined the server ---\n');
 });
 
+bot.on('end', () => {
+    console.log('\n--- Agent quit the server ---\n');
+    process.exit(1);
+});
+
+//The bot is waiting for commands that arw written in the chat
 bot.on('chat', function(username, message) {
-  if (username === bot.username) return;
-  switch(message){
-	case 'work':
-		if (working){
-			message1 = 'am already working';
-			bot.chat(message1);
-		} else {
-			message1 = 'Okey mah mastah';
-			working = true;
-			bot.chat(message1);
-			//spawner();
-		}
+    if (username === bot.username) return;
+    switch(message) {
+		//If the user writes chop in the chat the chop() function will be excecuted
+        case 'chop':
+            chop();
+            break
+		//If the user writes stop in the chat the bot will stop what he is currently doing, since the chop command will make him work until he dies
+        case 'stop':
+            bot.chat('stopping');
+            stop();
+            break;
+		//The come command is a simple A* excecution function that sets the current position of the player as a target and uses it as the end of the path to follow
+		case 'come':
+			const target = bot.players[username].entity
+			bot.navigate.to(target.position)
 		break
-	case 'stop working':
-		if (working){
-			message1 = 'k, am gonna stop';
-			bot.chat(message1);
-			working = false;
-		} else {
-			message1 = 'm8, am not even working';
-			bot.chat(message1);
-		}
-		break
-	case 'speak':
-		sayItems();
-		break
-	case 'come':
-		const target = bot.players[username].entity
-		bot.navigate.to(target.position)
-		bot.chat('Coor:' + target.position)
-		break
-	case 'test':
-		bot.findBlock({
-			point: bot.entity.position,
-			matching: 17,
-			maxDistance: 50,
-			count: 1,
-		  }, function(err, blocks) {
-			if (err) {
-			  return bot.chat('Error trying to find Wood: ' + err);
-			  //bot.quit('quitting');
-			  return;
-			}
-			if (blocks.length) {
-			  bot.navigate.to(blocks[0].position);
-			  bot.chat('I found Wood at ' + blocks[0].position + '.')
-			  
-			  //Here it equips the tool for the job
-			  for(var i=0; i < all_t.length; i++){
-				bot.chat('Entro for items' + all_t[i])
-				if (equipItem(all_t[i], 'hand')){
-					bot.chat('Entro a item true')
-					break;
-				}
-			  }
-			  
-				dig_front(blocks)
-			  
-			  //Minar el bloque de enfrente
-			  
-			  
-			  //bot.quit('quitting');
-			  return;
-			} else {
-			  bot.chat("I couldn't find any Wood within 50.");
-			  //bot.quit('quitting');
-			  return;
-			}
-		 });
-		break
-	case 'chop':
-		loop();
-		break
-  }
+			break;
+		//The leave command will make him leave the server after he finishes killing the process. 
+        case 'leave':
+            bot.end();
+            break;
+    }
 });
 
-function blockToHarvest () {
-  return bot.findBlock({
-    point: bot.entity.position,
-    matching: 17,
-  })
+//This is the most important function of the program, the chop function
+function chop() {
+	//First it finds a block and gets its position
+    bot.findBlock({
+        point: bot.entity.position,
+		//The block it finds matches the id in this case 17, which means it finds all the wood types of blocks
+        matching: 17,
+		//How far you want the agent to see, take in consideration that its the updated distance, meaning, if he chops down a tree and finds a new one and goes to chop it, his distance will be 50 blocks from the new tree. 
+		//This kind of makes it an infinite loop since it would be weird to not see a tree within 50 blocks away. 
+        maxDistance: 50,
+        count: 1,
+        }, function(err, blocks) {
+        if (err) {
+			//If the agent cant find a block, then it will send an error
+            bot.chat('Error trying to find Wood: ' + err);
+            return;
+        }
+        if (blocks.length) {
+            //Here the agent calls the A* function and sets the path to the block sending the final position, a timeout and an end radius. 
+            var path = bot.navigate.findPathSync(blocks[0].position, {
+                timeout: 1 * 1000,
+                endRadius: 1
+            });
+			//once it gets the path it will walk to it, this ensures that, he will start walking once he finds a safe path first
+            bot.navigate.walk(path.path, function() {
+                if (blocks.length) {
+					//This will lock the agents eyes to the wooden block so he will select it with the tool
+                    bot.lookAt(blocks[0].position.plus(vec3(0, 0, 0)));
+					//The dig function is called once you are sure the agent is looking at the wooden block
+					dig_front(blocks);
+                }
+            });
+			//You can show a message once the agent has arrived, since this is called every time it chops ONE log then, it will look weir seen the agent telling you he arrived every time he chops down a tree. So its commented in this case
+			bot.navigate.on('arrived', function () {
+				//bot.chat("I have arrived");
+			});
+            return;
+        } else {
+			//If the agent cant find a block, then it will send an error
+            bot.chat("I couldn't find any Wood within 50.");
+            return;
+        }
+    });
 }
 
-//funcion principal
-function loop(){
-	for(var a = 0; a <10; a++) {
-		bot.findBlock({
-			point: bot.entity.position,
-			matching: 17,
-			maxDistance: 50,
-			count: 1,
-		  }, function(err, blocks) {
-			if (err) {
-			  return bot.chat('Error trying to find Wood: ' + err);
-			  //bot.quit('quitting');
-			  return;
-			}
-			if (blocks.length) {
-			  bot.navigate.to(blocks[0].position);
-			  bot.chat('I found Wood at ' + blocks[0].position + '.')
-			  
-			  //Here it equips the tool for the job
-				equipItem(all_t[0], 'hand')
-			
-			  
-				dig_front(blocks)
-			  
-			  //Minar el bloque de enfrente
-			  
-			  
-			  //bot.quit('quitting');
-			  return;
-			} else {
-			  bot.chat("I couldn't find any Wood within 50.");
-			  //bot.quit('quitting');
-			  return;
-			}
-		 });
-	}
-}
-
-function dig_front(block){
-	var target = bot.blockAt(block[0].position)
-    if (target && bot.canDigBlock(target)) {
-      bot.chat(`starting to dig ${target.name}`)
-      bot.dig(target, onDiggingCompleted)
-    } else {
-      bot.chat('cannot dig')
-    }
+//This is a function that will dig the block he has in front of the agent, in this case the wood
+function dig_front(block) {
+	//He gets the block position and saves it as a target so he can later on chop it down
+    var target = bot.blockAt(block[0].position);
+    bot.chat('Target at ' + target.position + '.');
 	
-	function onDiggingCompleted (err) {
-    if (err) {
-      console.log(err.stack)
-    }
-    bot.chat(`finished digging ${target.name}`)
-  }
-
+	//If the agent has the proper tool to chop, then, he will start choppig wood
+    if (target && bot.canDigBlock(target)) {
+            bot.chat(`starting to dig ${target.name}`);
+			//The agent digs the wood
+            bot.dig(target, onDiggingCompleted);
+        } else {
+			//If the agent has no tool, or is in a position that makes it impossible, then, it will say "cannot dig"
+            bot.chat('cannot dig');
+        }
+		
+		//When the agent finishes chopping the wood log
+        function onDiggingCompleted (err) {
+            if (err) {
+                console.log(err.stack);
+            } else {
+                bot.chat(`finished digging ${target.name}`);
+                timeoutChop = setTimeout(chop, 1 * 1000);
+            }
+        }
 }
 
+//Stop function that is called when the user types stop
+function stop() {
+    clearTimeout(timeoutChop);
+}
+
+//Basic function that will make the agent equip the right weapon for the job
 function equipItem (name, destination) {
-    const item = itemByName(name)
+    const item = itemByName(name);
 
     if (item) {
         bot.equip(item, destination, checkIfEquipped);
 		return true;
-    } 
-	else {
+    } else {
 		//bot.chat(`I have no ${name} to chop this down`);
 		return false;
     }
@@ -187,27 +154,5 @@ function equipItem (name, destination) {
 }
 
 function itemByName (name) {
-    return bot.inventory.items().filter(item => item.name === name)[0]
+    return bot.inventory.items().filter(item => item.name === name)[0];
 }
-
-function sayItems (items = bot.inventory.items()) {
-  const output = items.map(itemToString).join(', ')
-  if (output) {
-    bot.chat(output)
-  } else {
-    bot.chat('empty')
-  }
-}
-
-function itemToString (item) {
-  if (item) {
-    return `${item.name} x ${item.count}`
-  } else {
-    return '(nothing)'
-  }
-}
-
-
-
-
-bot.on('error', err => console.log(err))
