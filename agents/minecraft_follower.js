@@ -1,4 +1,4 @@
-// node minecraft_follower.js localhost 25565
+// run -> node minecraft_follower.js localhost 25565
 
 const mineflayer = require('mineflayer');
 const navigate = require('mineflayer-navigate')(mineflayer);
